@@ -14,9 +14,6 @@ grid .t -column 0 -row 0 -columnspan 3 -sticky nwes
 ttk::frame .f
 grid .f -row 0 -row 1
 
-ttk::button .f.r -text "Refresh" -comm refresh
-grid .f.r -column 0 -row 0 -columnspan 1
-
 ttk::button .f.o -text "Open Location" -comm {openloc [.t selection]}
 grid .f.o -column 1 -row 0 -columnspan 1
 
@@ -30,27 +27,15 @@ ttk::button .f.u -text "Uninstall" -comm {uninstall [.t selection]}
 grid .f.u -column 4 -row 0 -columnspan 1
 
 bind .t <<TreeviewSelect>> {
-	set prog [lindex $::progs [.t selection]]
-	if {[string equal [lindex $prog 1] ""]} {
-		.f.u state disabled
-	} else {
-		.f.u state !disabled
-	}
-	if {[string equal [lindex $prog 2] ""]} {
-		.f.m state disabled
-	} else {
-		.f.m state !disabled
-	}
-	if {[string equal [lindex $prog 3] ""]} {
-		.f.rp state disabled
-	} else {
-		.f.rp state !disabled
-	}
-	if {[string equal [lindex $prog 4] ""]} {
-		.f.o state disabled
-	} else {
-		.f.o state !disabled
-	}
+	set app [lindex $::apps [.t selection]]
+	.f.u state [enablestate [string equal [lindex $app 1] ""]]
+	.f.m state [enablestate [string equal [lindex $app 2] ""]]
+	.f.rp state [enablestate [string equal [lindex $app 3] ""]]
+	.f.o state [enablestate [string equal [lindex $app 4] ""]]
+}
+
+proc enablestate {v} {
+	return [expr {$v ? "disabled" : "!disabled"}]
 }
 
 grid columnconfigure . 0 -weight 1
@@ -74,41 +59,39 @@ proc sortby {tree col direction} {
 }
 
 proc openloc {i} {
-	set prog [lindex $::progs $i]
-	set loc [lindex $prog 4]
+	set app [lindex $::apps $i]
+	set loc [lindex $app 4]
 	puts $loc
 	exec cmd /c explorer [string trim $loc "\\\""] &
 }
 
 proc modify {i} {
-	set prog [lindex $::progs $i]
-	set m [lindex $prog 2]
+	set app [lindex $::apps $i]
+	set m [lindex $app 2]
 	exec cmd /c explorer [string trim $m "\\\""] &
 }
 
 proc repair {i} {
-	set prog [lindex $::progs $i]
-	set r [lindex $prog 3]
+	set app [lindex $::apps $i]
+	set r [lindex $app 3]
 	exec cmd /c explorer [string trim $r "\\\""] &
 }
 
 proc uninstall {i} {
-	set prog [lindex $::progs $i]
-	set u [lindex $prog 1]
-	set name [lindex $prog 0]
+	set app [lindex $::apps $i]
+	set u [lindex $app 1]
+	set name [lindex $app 0]
 	set ans [tk_messageBox -type yesno -icon question -title "Confirm" -message "Really remove $name?"]
 	switch -- $ans {
 	yes {
 		exec cmd /c [string trim $u "\\\""] &
 		.t delete $i
 	}
-	no {
-	}
+	no {}
 	}
 }
 
-
-set progs {}
+set apps {}
 
 proc mklist {} {
 	set i 0
@@ -136,9 +119,8 @@ proc mklist {} {
 		catch {set publisher [registry get $path "Publisher"]}
 		catch {set date [registry get $path "InstallDate"]}
 		catch {set loc [registry get $path "InstallLocation"]}
-		
-		#puts [list $name $uninst $mod $repair $loc]		
-		lappend ::progs [list $name $uninst $mod $repair $loc]
+				
+		lappend ::apps [list $name $uninst $mod $repair $loc]
 		.t insert {} end -id $i -image {} -values [list $name $publisher $version $date]
 		incr i
 	}
